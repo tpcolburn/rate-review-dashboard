@@ -108,6 +108,14 @@ export function TimeBreakdownChart({ data, hasMaterialFilter }: TimeBreakdownCha
             axisLine={false}
             tickLine={false}
           />
+          <YAxis
+            yAxisId="rates"
+            orientation="right"
+            width={60}
+            tick={false}
+            axisLine={false}
+            tickLine={false}
+          />
 
           <Tooltip content={<CustomTooltip />} />
           <Legend

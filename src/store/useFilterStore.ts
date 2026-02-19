@@ -8,7 +8,7 @@ interface FilterStore {
   selectedMaterials: string[];
   timeScope: TimeScope;
   dateRange: [string, string];
-  visibleMetrics: { ai: boolean; ppa: boolean };
+  visibleMetrics: { ai: boolean; ppa: boolean; app: boolean; rates: boolean };
 
   setPlants: (plants: string[]) => void;
   setResources: (resources: string[]) => void;
@@ -16,7 +16,7 @@ interface FilterStore {
   setMaterials: (materials: string[]) => void;
   setTimeScope: (scope: TimeScope) => void;
   setDateRange: (range: [string, string]) => void;
-  toggleMetric: (metric: 'ai' | 'ppa') => void;
+  toggleMetric: (metric: 'ai' | 'ppa' | 'app' | 'rates') => void;
   pruneInvalidSelections: (options: FilterOptions) => void;
 }
 
@@ -27,7 +27,7 @@ export const useFilterStore = create<FilterStore>((set) => ({
   selectedMaterials: [],
   timeScope: 'week',
   dateRange: ['', ''],
-  visibleMetrics: { ai: false, ppa: false },
+  visibleMetrics: { ai: false, ppa: false, app: false, rates: false },
 
   setPlants: (plants) => set({ selectedPlants: plants }),
   setResources: (resources) => set({ selectedResources: resources }),

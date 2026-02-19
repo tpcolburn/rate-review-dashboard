@@ -11,6 +11,10 @@ interface AggBucket {
   actProdQtyEff: number;
   actProdQtyAtt: number;
   appPlanProdQty: number;
+  appAbsPlanActual: number;
+  nomTimesTarget: number;
+  nomTimesExpected: number;
+  nomTimesActual: number;
 }
 
 export function buildChartData(
@@ -37,6 +41,10 @@ export function buildChartData(
         actProdQtyEff: 0,
         actProdQtyAtt: 0,
         appPlanProdQty: 0,
+        appAbsPlanActual: 0,
+        nomTimesTarget: 0,
+        nomTimesExpected: 0,
+        nomTimesActual: 0,
       };
       buckets.set(period, bucket);
     }
@@ -48,6 +56,9 @@ export function buildChartData(
     bucket.unplannedStoppages += row.unplannedStoppages;
     bucket.plannedStoppages += row.plannedStoppages;
     bucket.actProdQtyEff += row.actProdQty;
+    bucket.nomTimesTarget += row.nominalSpeed * row.targetHours;
+    bucket.nomTimesExpected += row.nominalSpeed * row.expectedNPH;
+    bucket.nomTimesActual += row.nominalSpeed * row.actualNPH;
   }
 
   // Merge attainment data
@@ -67,12 +78,17 @@ export function buildChartData(
         actProdQtyEff: 0,
         actProdQtyAtt: 0,
         appPlanProdQty: 0,
+        appAbsPlanActual: 0,
+        nomTimesTarget: 0,
+        nomTimesExpected: 0,
+        nomTimesActual: 0,
       };
       buckets.set(period, bucket);
     }
 
     bucket.actProdQtyAtt += row.actProdQty;
     bucket.appPlanProdQty += row.appPlanProdQty;
+    bucket.appAbsPlanActual += row.appAbsPlanActual;
   }
 
   // Convert to chart data points
@@ -87,6 +103,12 @@ export function buildChartData(
 
     const ppa = b.appPlanProdQty > 0 ? (b.actProdQtyAtt / b.appPlanProdQty) * 100 : null;
 
+    const app = b.appPlanProdQty > 0 ? (1 - b.appAbsPlanActual / b.appPlanProdQty) * 100 : null;
+
+    const nominalRate = b.actualNPH > 0 ? b.nomTimesTarget / b.actualNPH : null;
+    const planRate = b.actualNPH > 0 ? b.nomTimesExpected / b.actualNPH : null;
+    const actualRate = b.actualNPH > 0 ? b.nomTimesActual / b.actualNPH : null;
+
     const deviation =
       expectedEff !== null && actualEff !== null
         ? Math.round((actualEff - expectedEff) * 10) / 10
@@ -99,6 +121,10 @@ export function buildChartData(
       actualEfficiency: actualEff !== null ? Math.round(actualEff * 10) / 10 : null,
       ai: ai !== null ? Math.round(ai * 10) / 10 : null,
       ppa: ppa !== null ? Math.round(ppa * 10) / 10 : null,
+      app: app !== null ? Math.round(app * 10) / 10 : null,
+      nominalRate: nominalRate !== null ? Math.round(nominalRate) : null,
+      planRate: planRate !== null ? Math.round(planRate) : null,
+      actualRate: actualRate !== null ? Math.round(actualRate) : null,
       deviation,
       targetHours: Math.round(b.targetHours * 100) / 100,
       actualNPH: Math.round(b.actualNPH * 100) / 100,

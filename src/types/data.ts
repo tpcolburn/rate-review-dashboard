@@ -56,6 +56,10 @@ export interface ChartDataPoint {
   actualEfficiency: number | null;
   ai: number | null;
   ppa: number | null;
+  app: number | null;
+  nominalRate: number | null;
+  planRate: number | null;
+  actualRate: number | null;
   deviation: number | null;
   targetHours: number;
   actualNPH: number;
@@ -93,5 +97,7 @@ export interface FilterState {
   visibleMetrics: {
     ai: boolean;
     ppa: boolean;
+    app: boolean;
+    rates: boolean;
   };
 }

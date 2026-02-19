@@ -19,13 +19,15 @@ interface EfficiencyChartProps {
   data: ChartDataPoint[];
 }
 
+const RATE_KEYS = new Set(['nominalRate', 'planRate', 'actualRate']);
+
 function CustomTooltip({
   active,
   payload,
   label,
 }: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
+  payload?: Array<{ name: string; value: number; color: string; dataKey?: string }>;
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
@@ -33,11 +35,17 @@ function CustomTooltip({
   return (
     <div className="bg-white border border-gray-200 rounded shadow-lg p-3 text-sm">
       <p className="font-medium text-gray-900 mb-1">{label}</p>
-      {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color }} className="leading-relaxed">
-          {entry.name}: <span className="font-medium">{entry.value?.toFixed(1)}%</span>
-        </p>
-      ))}
+      {payload.map((entry) => {
+        const isRate = RATE_KEYS.has(entry.dataKey ?? '');
+        return (
+          <p key={entry.name} style={{ color: entry.color }} className="leading-relaxed">
+            {entry.name}:{' '}
+            <span className="font-medium">
+              {isRate ? entry.value?.toLocaleString() : `${entry.value?.toFixed(1)}%`}
+            </span>
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -171,7 +179,8 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
     );
   }
 
-  const showRightAxis = visibleMetrics.ai || visibleMetrics.ppa;
+  const showRightAxis = visibleMetrics.ai || visibleMetrics.ppa || visibleMetrics.app;
+  const showRates = visibleMetrics.rates;
 
   return (
     <div>
@@ -212,7 +221,27 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
           >
             {showRightAxis && (
               <Label
-                value="AI / PPA %"
+                value="AI / PPA / APP %"
+                angle={90}
+                position="insideRight"
+                style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
+              />
+            )}
+          </YAxis>
+
+          <YAxis
+            yAxisId="rates"
+            orientation="right"
+            width={60}
+            domain={[0, 'auto']}
+            tick={showRates ? { fontSize: 11, fill: '#6b7280' } : false}
+            tickFormatter={(v: number) => v.toLocaleString()}
+            axisLine={showRates}
+            tickLine={showRates}
+          >
+            {showRates && (
+              <Label
+                value="Rate (units/hr)"
                 angle={90}
                 position="insideRight"
                 style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
@@ -284,6 +313,59 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
               stroke="#f59e0b"
               strokeWidth={1}
             />
+          )}
+
+          {/* APP - Adherence to Production Plan */}
+          {visibleMetrics.app && (
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="app"
+              name="APP (Adherence)"
+              stroke="#7c3aed"
+              strokeWidth={1.5}
+              strokeDasharray="4 2"
+              dot={false}
+              connectNulls
+            />
+          )}
+
+          {/* Production Rates */}
+          {visibleMetrics.rates && (
+            <>
+              <Line
+                yAxisId="rates"
+                type="monotone"
+                dataKey="nominalRate"
+                name="Nominal Rate"
+                stroke="#0ea5e9"
+                strokeWidth={1.5}
+                strokeDasharray="6 3"
+                dot={false}
+                connectNulls
+              />
+              <Line
+                yAxisId="rates"
+                type="monotone"
+                dataKey="planRate"
+                name="Plan Rate"
+                stroke="#8b5cf6"
+                strokeWidth={1.5}
+                strokeDasharray="4 2"
+                dot={false}
+                connectNulls
+              />
+              <Line
+                yAxisId="rates"
+                type="monotone"
+                dataKey="actualRate"
+                name="Actual Rate"
+                stroke="#f97316"
+                strokeWidth={1.5}
+                dot={false}
+                connectNulls
+              />
+            </>
           )}
         </ComposedChart>
       </ResponsiveContainer>

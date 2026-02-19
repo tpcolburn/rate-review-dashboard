@@ -26,6 +26,24 @@ export function MetricToggles() {
         />
         <span className="text-sm font-medium text-gray-700">PPA (Planned Production Attainment)</span>
       </label>
+      <label className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={visibleMetrics.app}
+          onChange={() => toggleMetric('app')}
+          className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+        />
+        <span className="text-sm font-medium text-gray-700">APP (Adherence to Production Plan)</span>
+      </label>
+      <label className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={visibleMetrics.rates}
+          onChange={() => toggleMetric('rates')}
+          className="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+        />
+        <span className="text-sm font-medium text-gray-700">Production Rates</span>
+      </label>
     </div>
   );
 }
