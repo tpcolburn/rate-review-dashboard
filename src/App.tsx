@@ -52,14 +52,12 @@ function App() {
       {/* Metric Toggles */}
       <MetricToggles />
 
-      {/* Efficiency Chart */}
-      <div className="flex-1 px-4 py-4">
-        <EfficiencyChart data={chartData} />
-      </div>
-
-      {/* Time Breakdown Chart */}
-      <div className="px-4 pb-4">
-        <TimeBreakdownChart data={timeBreakdownData} hasMaterialFilter={hasMaterialFilter} />
+      {/* Charts */}
+      <div className="px-4 py-4">
+        <div className="bg-white p-4">
+          <EfficiencyChart data={chartData} />
+          <TimeBreakdownChart data={timeBreakdownData} hasMaterialFilter={hasMaterialFilter} />
+        </div>
       </div>
 
       {/* Data Table */}

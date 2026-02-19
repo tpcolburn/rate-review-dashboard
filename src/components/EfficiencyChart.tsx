@@ -171,21 +171,23 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
     );
   }
 
+  const showRightAxis = visibleMetrics.ai || visibleMetrics.ppa;
+
   return (
-    <div className="bg-white p-4">
-      <ResponsiveContainer width="100%" height={420}>
-        <ComposedChart data={data} margin={{ top: 20, right: 60, bottom: 20, left: 20 }}>
+    <div>
+      <ResponsiveContainer width="100%" height={350}>
+        <ComposedChart syncId="dashboard" data={data} margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis
             dataKey="period"
-            tick={{ fontSize: 11, fill: '#6b7280' }}
-            interval={'preserveStartEnd'}
-            angle={-45}
-            textAnchor="end"
-            height={60}
+            tick={false}
+            axisLine={{ stroke: '#e5e7eb' }}
+            tickLine={false}
+            height={5}
           />
           <YAxis
             yAxisId="left"
+            width={60}
             domain={[0, 'auto']}
             tick={{ fontSize: 11, fill: '#6b7280' }}
             tickFormatter={(v: number) => `${v}%`}
@@ -198,22 +200,25 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             />
           </YAxis>
 
-          {(visibleMetrics.ai || visibleMetrics.ppa) && (
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              domain={[0, 'auto']}
-              tick={{ fontSize: 11, fill: '#6b7280' }}
-              tickFormatter={(v: number) => `${v}%`}
-            >
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            width={60}
+            domain={[0, 'auto']}
+            tick={showRightAxis ? { fontSize: 11, fill: '#6b7280' } : false}
+            tickFormatter={(v: number) => `${v}%`}
+            axisLine={showRightAxis}
+            tickLine={showRightAxis}
+          >
+            {showRightAxis && (
               <Label
                 value="AI / PPA %"
                 angle={90}
                 position="insideRight"
                 style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
               />
-            </YAxis>
-          )}
+            )}
+          </YAxis>
 
           <Tooltip content={<CustomTooltip />} />
           <Legend

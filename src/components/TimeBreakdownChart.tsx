@@ -74,10 +74,10 @@ export function TimeBreakdownChart({ data, hasMaterialFilter }: TimeBreakdownCha
   }
 
   return (
-    <div className="bg-white p-4">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">Time Breakdown (Hours)</h3>
+    <div className="pt-2 border-t border-gray-100">
+      <h3 className="text-sm font-medium text-gray-700 mb-1 px-1">Time Breakdown (Hours)</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 10, right: 60, bottom: 20, left: 20 }}>
+        <BarChart syncId="dashboard" data={data} margin={{ top: 10, right: 20, bottom: 20, left: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis
             dataKey="period"
@@ -88,6 +88,8 @@ export function TimeBreakdownChart({ data, hasMaterialFilter }: TimeBreakdownCha
             height={60}
           />
           <YAxis
+            yAxisId="left"
+            width={60}
             tick={{ fontSize: 11, fill: '#6b7280' }}
             tickFormatter={(v: number) => `${v}h`}
           >
@@ -98,6 +100,14 @@ export function TimeBreakdownChart({ data, hasMaterialFilter }: TimeBreakdownCha
               style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
             />
           </YAxis>
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            width={60}
+            tick={false}
+            axisLine={false}
+            tickLine={false}
+          />
 
           <Tooltip content={<CustomTooltip />} />
           <Legend
@@ -107,31 +117,34 @@ export function TimeBreakdownChart({ data, hasMaterialFilter }: TimeBreakdownCha
           />
 
           <Bar
+            yAxisId="left"
             dataKey="goodProductionTime"
             name="Good Production Time"
             stackId="time"
             fill={COLORS.goodProductionTime}
           />
           <Bar
+            yAxisId="left"
             dataKey="unplannedStoppages"
             name="Unplanned Stoppages"
             stackId="time"
             fill={COLORS.unplannedStoppages}
           />
           <Bar
+            yAxisId="left"
             dataKey="plannedStoppages"
             name="Planned Stoppages"
             stackId="time"
             fill={COLORS.plannedStoppages}
           />
-          {!hasMaterialFilter && (
-            <Bar
-              dataKey="idleTime"
-              name="Idle Time"
-              stackId="time"
-              fill={COLORS.idleTime}
-            />
-          )}
+          <Bar
+            yAxisId="left"
+            dataKey="idleTime"
+            name="Idle Time"
+            stackId="time"
+            fill={COLORS.idleTime}
+            hide={hasMaterialFilter}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
