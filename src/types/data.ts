@@ -64,12 +64,30 @@ export interface ChartDataPoint {
   appPlanProdQty: number;
 }
 
+export interface TimeBreakdownDataPoint {
+  period: string;
+  sortKey: string;
+  goodProductionTime: number;
+  unplannedStoppages: number;
+  plannedStoppages: number;
+  idleTime: number;
+  totalAvailableHours: number;
+}
+
+export interface FilterOptions {
+  plants: { code: string; name: string }[];
+  resources: { code: string; name: string }[];
+  materialTypes: string[];
+  materials: string[];
+}
+
 export type TimeScope = 'week' | 'month' | 'quarter';
 
 export interface FilterState {
-  selectedPlant: string | null;
-  selectedResource: string | null;
-  selectedMaterial: string | null;
+  selectedPlants: string[];
+  selectedResources: string[];
+  selectedMaterialTypes: string[];
+  selectedMaterials: string[];
   timeScope: TimeScope;
   dateRange: [string, string]; // [start yearWeek, end yearWeek]
   visibleMetrics: {

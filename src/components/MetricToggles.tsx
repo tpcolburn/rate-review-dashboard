@@ -15,7 +15,7 @@ export function MetricToggles() {
           onChange={() => toggleMetric('ai')}
           className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
         />
-        <span className="text-sm font-medium text-gray-700">AI (Availability Index)</span>
+        <span className="text-sm font-medium text-gray-700">AI (Asset Intensity)</span>
       </label>
       <label className="flex items-center gap-1.5 cursor-pointer">
         <input

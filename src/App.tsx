@@ -1,13 +1,19 @@
 import { useExcelData } from './hooks/useExcelData';
 import { useFilteredData } from './hooks/useFilteredData';
+import { useFilterStore } from './store/useFilterStore';
 import { FilterBar } from './components/FilterBar';
 import { MetricToggles } from './components/MetricToggles';
 import { EfficiencyChart } from './components/EfficiencyChart';
+import { TimeBreakdownChart } from './components/TimeBreakdownChart';
 import { DataTable } from './components/DataTable';
 
 function App() {
   const { data, loading, error } = useExcelData();
-  const chartData = useFilteredData(data);
+  const { chartData, timeBreakdownData } = useFilteredData(data);
+  const selectedMaterialTypes = useFilterStore((s) => s.selectedMaterialTypes);
+  const selectedMaterials = useFilterStore((s) => s.selectedMaterials);
+
+  const hasMaterialFilter = selectedMaterialTypes.length > 0 || selectedMaterials.length > 0;
 
   if (loading) {
     return (
@@ -46,9 +52,14 @@ function App() {
       {/* Metric Toggles */}
       <MetricToggles />
 
-      {/* Chart */}
+      {/* Efficiency Chart */}
       <div className="flex-1 px-4 py-4">
         <EfficiencyChart data={chartData} />
+      </div>
+
+      {/* Time Breakdown Chart */}
+      <div className="px-4 pb-4">
+        <TimeBreakdownChart data={timeBreakdownData} hasMaterialFilter={hasMaterialFilter} />
       </div>
 
       {/* Data Table */}

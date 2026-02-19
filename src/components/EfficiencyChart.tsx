@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Label,
+  Customized,
 } from 'recharts';
 import type { ChartDataPoint } from '../types/data';
 import { useFilterStore } from '../store/useFilterStore';
@@ -51,7 +52,6 @@ function makeDeviationLabel(chartData: ChartDataPoint[]) {
     if (x === undefined || y === undefined || index === undefined) return null;
     const deviation = chartData[index]?.deviation;
     if (deviation === null || deviation === undefined) return null;
-    // Only show label if there are few enough points or deviation is significant
     if (chartData.length > 20 && Math.abs(deviation) < 5) return null;
     const isPositive = deviation >= 0;
     return (
@@ -68,6 +68,95 @@ function makeDeviationLabel(chartData: ChartDataPoint[]) {
       </text>
     );
   };
+}
+
+// Renders shaded areas between expected and actual efficiency lines.
+// Green where actual >= expected, red where actual < expected.
+function ShadedRegions(props: Record<string, unknown>) {
+  const { formattedGraphicalItems } = props as {
+    formattedGraphicalItems?: Array<{
+      item: { props: { dataKey: string } };
+      props: { points: Array<{ x: number; y: number }> };
+    }>;
+  };
+
+  if (!formattedGraphicalItems) return null;
+
+  const expectedItem = formattedGraphicalItems.find(
+    (item) => item.item.props.dataKey === 'expectedEfficiency'
+  );
+  const actualItem = formattedGraphicalItems.find(
+    (item) => item.item.props.dataKey === 'actualEfficiency'
+  );
+
+  if (!expectedItem || !actualItem) return null;
+
+  const expectedPts = expectedItem.props.points;
+  const actualPts = actualItem.props.points;
+
+  if (!expectedPts?.length || !actualPts?.length) return null;
+  const len = Math.min(expectedPts.length, actualPts.length);
+  if (len < 2) return null;
+
+  const greenPaths: string[] = [];
+  const redPaths: string[] = [];
+
+  for (let i = 0; i < len - 1; i++) {
+    const ex1 = expectedPts[i].x, ey1 = expectedPts[i].y;
+    const ex2 = expectedPts[i + 1].x, ey2 = expectedPts[i + 1].y;
+    const ax1 = actualPts[i].x, ay1 = actualPts[i].y;
+    const ax2 = actualPts[i + 1].x, ay2 = actualPts[i + 1].y;
+
+    // In SVG, lower y = higher on screen. actual "above" expected means ay < ey.
+    const diff1 = ey1 - ay1; // positive = actual above expected (green)
+    const diff2 = ey2 - ay2;
+
+    if (diff1 >= 0 && diff2 >= 0) {
+      // Entire segment: actual >= expected → green
+      greenPaths.push(
+        `M${ax1},${ay1} L${ax2},${ay2} L${ex2},${ey2} L${ex1},${ey1} Z`
+      );
+    } else if (diff1 <= 0 && diff2 <= 0) {
+      // Entire segment: actual < expected → red
+      redPaths.push(
+        `M${ax1},${ay1} L${ax2},${ay2} L${ex2},${ey2} L${ex1},${ey1} Z`
+      );
+    } else {
+      // Lines cross — find intersection
+      const t = diff1 / (diff1 - diff2);
+      const cx = ex1 + t * (ex2 - ex1);
+      const cy = ey1 + t * (ey2 - ey1);
+
+      if (diff1 > 0) {
+        // First half green, second half red
+        greenPaths.push(
+          `M${ax1},${ay1} L${cx},${cy} L${ex1},${ey1} Z`
+        );
+        redPaths.push(
+          `M${cx},${cy} L${ax2},${ay2} L${ex2},${ey2} Z`
+        );
+      } else {
+        // First half red, second half green
+        redPaths.push(
+          `M${ax1},${ay1} L${cx},${cy} L${ex1},${ey1} Z`
+        );
+        greenPaths.push(
+          `M${cx},${cy} L${ax2},${ay2} L${ex2},${ey2} Z`
+        );
+      }
+    }
+  }
+
+  return (
+    <g>
+      {greenPaths.map((d, i) => (
+        <path key={`g${i}`} d={d} fill="#22c55e" fillOpacity={0.18} stroke="none" />
+      ))}
+      {redPaths.map((d, i) => (
+        <path key={`r${i}`} d={d} fill="#ef4444" fillOpacity={0.18} stroke="none" />
+      ))}
+    </g>
+  );
 }
 
 export function EfficiencyChart({ data }: EfficiencyChartProps) {
@@ -135,6 +224,9 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
 
           <ReferenceLine yAxisId="left" y={100} stroke="#9ca3af" strokeDasharray="3 3" />
 
+          {/* Shaded area between expected and actual */}
+          <Customized component={ShadedRegions} />
+
           {/* Expected Line Efficiency - dashed */}
           <Line
             yAxisId="left"
@@ -161,13 +253,13 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             label={<DeviationLabel />}
           />
 
-          {/* AI - Availability Index */}
+          {/* AI - Asset Intensity */}
           {visibleMetrics.ai && (
             <Line
               yAxisId="right"
               type="monotone"
               dataKey="ai"
-              name="AI (Availability Index)"
+              name="AI (Asset Intensity)"
               stroke="#059669"
               strokeWidth={1.5}
               strokeDasharray="4 2"

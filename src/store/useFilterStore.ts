@@ -1,44 +1,41 @@
 import { create } from 'zustand';
-import type { TimeScope } from '../types/data';
+import type { TimeScope, FilterOptions } from '../types/data';
 
 interface FilterStore {
-  selectedPlant: string | null;
-  selectedResource: string | null;
-  selectedMaterial: string | null;
+  selectedPlants: string[];
+  selectedResources: string[];
+  selectedMaterialTypes: string[];
+  selectedMaterials: string[];
   timeScope: TimeScope;
-  dateRange: [string, string]; // [start yearWeek, end yearWeek]
+  dateRange: [string, string];
   visibleMetrics: { ai: boolean; ppa: boolean };
 
-  setPlant: (plant: string | null) => void;
-  setResource: (resource: string | null) => void;
-  setMaterial: (material: string | null) => void;
+  setPlants: (plants: string[]) => void;
+  setResources: (resources: string[]) => void;
+  setMaterialTypes: (types: string[]) => void;
+  setMaterials: (materials: string[]) => void;
   setTimeScope: (scope: TimeScope) => void;
   setDateRange: (range: [string, string]) => void;
   toggleMetric: (metric: 'ai' | 'ppa') => void;
+  pruneInvalidSelections: (options: FilterOptions) => void;
 }
 
 export const useFilterStore = create<FilterStore>((set) => ({
-  selectedPlant: null,
-  selectedResource: null,
-  selectedMaterial: null,
+  selectedPlants: [],
+  selectedResources: [],
+  selectedMaterialTypes: [],
+  selectedMaterials: [],
   timeScope: 'week',
   dateRange: ['', ''],
   visibleMetrics: { ai: false, ppa: false },
 
-  setPlant: (plant) =>
-    set({ selectedPlant: plant, selectedResource: null, selectedMaterial: null }),
+  setPlants: (plants) => set({ selectedPlants: plants }),
+  setResources: (resources) => set({ selectedResources: resources }),
+  setMaterialTypes: (types) => set({ selectedMaterialTypes: types }),
+  setMaterials: (materials) => set({ selectedMaterials: materials }),
 
-  setResource: (resource) =>
-    set({ selectedResource: resource, selectedMaterial: null }),
-
-  setMaterial: (material) =>
-    set({ selectedMaterial: material }),
-
-  setTimeScope: (scope) =>
-    set({ timeScope: scope }),
-
-  setDateRange: (range) =>
-    set({ dateRange: range }),
+  setTimeScope: (scope) => set({ timeScope: scope }),
+  setDateRange: (range) => set({ dateRange: range }),
 
   toggleMetric: (metric) =>
     set((state) => ({
@@ -47,4 +44,34 @@ export const useFilterStore = create<FilterStore>((set) => ({
         [metric]: !state.visibleMetrics[metric],
       },
     })),
+
+  pruneInvalidSelections: (options) =>
+    set((state) => {
+      const validPlantCodes = new Set(options.plants.map((p) => p.code));
+      const validResourceCodes = new Set(options.resources.map((r) => r.code));
+      const validMaterialTypes = new Set(options.materialTypes);
+      const validMaterials = new Set(options.materials);
+
+      const prunedPlants = state.selectedPlants.filter((p) => validPlantCodes.has(p));
+      const prunedResources = state.selectedResources.filter((r) => validResourceCodes.has(r));
+      const prunedMaterialTypes = state.selectedMaterialTypes.filter((t) => validMaterialTypes.has(t));
+      const prunedMaterials = state.selectedMaterials.filter((m) => validMaterials.has(m));
+
+      // Only update if something actually changed
+      if (
+        prunedPlants.length === state.selectedPlants.length &&
+        prunedResources.length === state.selectedResources.length &&
+        prunedMaterialTypes.length === state.selectedMaterialTypes.length &&
+        prunedMaterials.length === state.selectedMaterials.length
+      ) {
+        return state;
+      }
+
+      return {
+        selectedPlants: prunedPlants,
+        selectedResources: prunedResources,
+        selectedMaterialTypes: prunedMaterialTypes,
+        selectedMaterials: prunedMaterials,
+      };
+    }),
 }));

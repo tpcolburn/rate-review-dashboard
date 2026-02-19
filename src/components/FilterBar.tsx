@@ -1,12 +1,9 @@
 import { useMemo, useEffect } from 'react';
 import type { ParsedData, TimeScope } from '../types/data';
 import { useFilterStore } from '../store/useFilterStore';
-import {
-  getUniquePlants,
-  getUniqueResources,
-  getUniqueMaterials,
-} from '../utils/dataTransforms';
+import { getFilteredOptions } from '../utils/dataTransforms';
 import { getYearWeekRange } from '../utils/timeUtils';
+import { MultiSelect } from './MultiSelect';
 
 interface FilterBarProps {
   data: ParsedData;
@@ -14,27 +11,31 @@ interface FilterBarProps {
 
 export function FilterBar({ data }: FilterBarProps) {
   const {
-    selectedPlant,
-    selectedResource,
-    selectedMaterial,
+    selectedPlants,
+    selectedResources,
+    selectedMaterialTypes,
+    selectedMaterials,
     timeScope,
     dateRange,
-    setPlant,
-    setResource,
-    setMaterial,
+    setPlants,
+    setResources,
+    setMaterialTypes,
+    setMaterials,
     setTimeScope,
     setDateRange,
+    pruneInvalidSelections,
   } = useFilterStore();
 
-  const plants = useMemo(() => getUniquePlants(data.efficiency), [data.efficiency]);
-  const resources = useMemo(
-    () => getUniqueResources(data.efficiency, selectedPlant),
-    [data.efficiency, selectedPlant]
+  // Cross-filtered options
+  const options = useMemo(
+    () => getFilteredOptions(data.efficiency, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials),
+    [data.efficiency, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials]
   );
-  const materials = useMemo(
-    () => getUniqueMaterials(data.efficiency, selectedPlant, selectedResource),
-    [data.efficiency, selectedPlant, selectedResource]
-  );
+
+  // Prune stale selections after cross-filter recalc
+  useEffect(() => {
+    pruneInvalidSelections(options);
+  }, [options, pruneInvalidSelections]);
 
   // Get full date range from data
   const fullRange = useMemo(() => {
@@ -66,61 +67,44 @@ export function FilterBar({ data }: FilterBarProps) {
     <div className="bg-white border-b border-gray-200 px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         {/* Plant */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Plant
-          </label>
-          <select
-            value={selectedPlant || ''}
-            onChange={(e) => setPlant(e.target.value || null)}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white min-w-[180px]"
-          >
-            <option value="">All Plants</option>
-            {plants.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.code} - {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <MultiSelect
+          label="Plant"
+          options={options.plants.map((p) => ({ value: p.code, label: `${p.code} - ${p.name}` }))}
+          selected={selectedPlants}
+          onChange={setPlants}
+          allLabel="All Plants"
+          minWidth="180px"
+        />
 
         {/* Resource */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Resource
-          </label>
-          <select
-            value={selectedResource || ''}
-            onChange={(e) => setResource(e.target.value || null)}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white min-w-[220px]"
-          >
-            <option value="">All Resources</option>
-            {resources.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <MultiSelect
+          label="Resource"
+          options={options.resources.map((r) => ({ value: r.code, label: r.name }))}
+          selected={selectedResources}
+          onChange={setResources}
+          allLabel="All Resources"
+          minWidth="220px"
+        />
+
+        {/* Material Type */}
+        <MultiSelect
+          label="Material Type"
+          options={options.materialTypes.map((mt) => ({ value: mt, label: mt }))}
+          selected={selectedMaterialTypes}
+          onChange={setMaterialTypes}
+          allLabel="All Types"
+          minWidth="200px"
+        />
 
         {/* Material */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Material
-          </label>
-          <select
-            value={selectedMaterial || ''}
-            onChange={(e) => setMaterial(e.target.value || null)}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white min-w-[260px]"
-          >
-            <option value="">All Materials</option>
-            {materials.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
+        <MultiSelect
+          label="Material"
+          options={options.materials.map((m) => ({ value: m, label: m }))}
+          selected={selectedMaterials}
+          onChange={setMaterials}
+          allLabel="All Materials"
+          minWidth="260px"
+        />
 
         {/* Time scope */}
         <div className="flex items-center gap-1.5 ml-auto">

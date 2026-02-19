@@ -1,4 +1,4 @@
-import type { EfficiencyRow, AttainmentRow, ChartDataPoint, TimeScope } from '../types/data';
+import type { EfficiencyRow, AttainmentRow, ChartDataPoint, TimeScope, FilterOptions, TimeBreakdownDataPoint } from '../types/data';
 import { getPeriodKey, periodSortKey, periodLabel } from './timeUtils';
 
 interface AggBucket {
@@ -79,8 +79,8 @@ export function buildChartData(
   const points: ChartDataPoint[] = [];
 
   for (const [period, b] of buckets) {
-    const expectedEff = b.targetHours > 0 ? (b.expectedNPH / b.targetHours) * 100 : null;
-    const actualEff = b.targetHours > 0 ? (b.actualNPH / b.targetHours) * 100 : null;
+    const expectedEff = b.expectedNPH > 0 ? (b.targetHours / b.expectedNPH) * 100 : null;
+    const actualEff = b.actualNPH > 0 ? (b.targetHours / b.actualNPH) * 100 : null;
 
     const aiDenom = b.goodProductionTime + b.unplannedStoppages + b.plannedStoppages;
     const ai = aiDenom > 0 ? (b.goodProductionTime / aiDenom) * 100 : null;
@@ -114,45 +114,130 @@ export function buildChartData(
   return points;
 }
 
-// Get unique values for filter dropdowns
-export function getUniquePlants(rows: EfficiencyRow[]): { code: string; name: string }[] {
-  const map = new Map<string, string>();
+// Cross-filtering: each dimension's options come from rows filtered by all OTHER active selections
+export function getFilteredOptions(
+  rows: EfficiencyRow[],
+  selectedPlants: string[],
+  selectedResources: string[],
+  selectedMaterialTypes: string[],
+  selectedMaterials: string[]
+): FilterOptions {
+  const hasPlants = selectedPlants.length > 0;
+  const hasResources = selectedResources.length > 0;
+  const hasMaterialTypes = selectedMaterialTypes.length > 0;
+  const hasMaterials = selectedMaterials.length > 0;
+
+  // Plant options: filter by resource + materialType + material (NOT plant)
+  const plantMap = new Map<string, string>();
   for (const r of rows) {
-    if (r.plantCode && !map.has(r.plantCode)) {
-      map.set(r.plantCode, r.plantName);
+    if (hasResources && !selectedResources.includes(r.workCenterCode)) continue;
+    if (hasMaterialTypes && (!r.materialType || !selectedMaterialTypes.includes(r.materialType))) continue;
+    if (hasMaterials && (!r.materialDesc || !selectedMaterials.includes(r.materialDesc))) continue;
+    if (r.plantCode && !plantMap.has(r.plantCode)) {
+      plantMap.set(r.plantCode, r.plantName);
     }
   }
-  return Array.from(map, ([code, name]) => ({ code, name })).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-}
 
-export function getUniqueResources(
-  rows: EfficiencyRow[],
-  plantCode: string | null
-): { code: string; name: string }[] {
-  const map = new Map<string, string>();
+  // Resource options: filter by plant + materialType + material (NOT resource)
+  const resourceMap = new Map<string, string>();
   for (const r of rows) {
-    if (plantCode && r.plantCode !== plantCode) continue;
-    if (r.workCenterCode && !map.has(r.workCenterCode)) {
-      map.set(r.workCenterCode, r.workCenterName);
+    if (hasPlants && !selectedPlants.includes(r.plantCode)) continue;
+    if (hasMaterialTypes && (!r.materialType || !selectedMaterialTypes.includes(r.materialType))) continue;
+    if (hasMaterials && (!r.materialDesc || !selectedMaterials.includes(r.materialDesc))) continue;
+    if (r.workCenterCode && !resourceMap.has(r.workCenterCode)) {
+      resourceMap.set(r.workCenterCode, r.workCenterName);
     }
   }
-  return Array.from(map, ([code, name]) => ({ code, name })).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+
+  // Material Type options: filter by plant + resource + material (NOT materialType)
+  const materialTypeSet = new Set<string>();
+  for (const r of rows) {
+    if (hasPlants && !selectedPlants.includes(r.plantCode)) continue;
+    if (hasResources && !selectedResources.includes(r.workCenterCode)) continue;
+    if (hasMaterials && (!r.materialDesc || !selectedMaterials.includes(r.materialDesc))) continue;
+    if (r.materialType) materialTypeSet.add(r.materialType);
+  }
+
+  // Material options: filter by plant + resource + materialType (NOT material)
+  const materialSet = new Set<string>();
+  for (const r of rows) {
+    if (hasPlants && !selectedPlants.includes(r.plantCode)) continue;
+    if (hasResources && !selectedResources.includes(r.workCenterCode)) continue;
+    if (hasMaterialTypes && (!r.materialType || !selectedMaterialTypes.includes(r.materialType))) continue;
+    if (r.materialDesc) materialSet.add(r.materialDesc);
+  }
+
+  return {
+    plants: Array.from(plantMap, ([code, name]) => ({ code, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ),
+    resources: Array.from(resourceMap, ([code, name]) => ({ code, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ),
+    materialTypes: Array.from(materialTypeSet).sort(),
+    materials: Array.from(materialSet).sort(),
+  };
 }
 
-export function getUniqueMaterials(
-  rows: EfficiencyRow[],
-  plantCode: string | null,
-  resourceCode: string | null
-): string[] {
-  const set = new Set<string>();
-  for (const r of rows) {
-    if (plantCode && r.plantCode !== plantCode) continue;
-    if (resourceCode && r.workCenterCode !== resourceCode) continue;
-    if (r.materialDesc) set.add(r.materialDesc);
+// Build time breakdown data: GPT + Unplanned + Planned + Idle per period
+export function buildTimeBreakdownData(
+  efficiency: EfficiencyRow[],
+  timeScope: TimeScope,
+  hasMaterialFilter: boolean
+): TimeBreakdownDataPoint[] {
+  // Step 1: Aggregate to (resource, week) level — sum across materials per resource-week
+  const resourceWeekKey = (wc: string, yw: string) => `${wc}||${yw}`;
+  const resourceWeekMap = new Map<string, { gpt: number; ups: number; ps: number }>();
+
+  for (const row of efficiency) {
+    const key = resourceWeekKey(row.workCenterCode, row.yearWeek);
+    let bucket = resourceWeekMap.get(key);
+    if (!bucket) {
+      bucket = { gpt: 0, ups: 0, ps: 0 };
+      resourceWeekMap.set(key, bucket);
+    }
+    bucket.gpt += row.goodProductionTime;
+    bucket.ups += row.unplannedStoppages;
+    bucket.ps += row.plannedStoppages;
   }
-  return Array.from(set).sort();
+
+  // Step 2: Aggregate resource-weeks into period buckets
+  const periodBuckets = new Map<string, { gpt: number; ups: number; ps: number; resourceWeekCount: number }>();
+
+  for (const [key, val] of resourceWeekMap) {
+    const yearWeek = key.split('||')[1];
+    const period = getPeriodKey(yearWeek, timeScope);
+    if (!period) continue;
+
+    let bucket = periodBuckets.get(period);
+    if (!bucket) {
+      bucket = { gpt: 0, ups: 0, ps: 0, resourceWeekCount: 0 };
+      periodBuckets.set(period, bucket);
+    }
+    bucket.gpt += val.gpt;
+    bucket.ups += val.ups;
+    bucket.ps += val.ps;
+    bucket.resourceWeekCount += 1;
+  }
+
+  // Step 3: Convert to TimeBreakdownDataPoint[]
+  const points: TimeBreakdownDataPoint[] = [];
+
+  for (const [period, b] of periodBuckets) {
+    const totalAvailable = 168 * b.resourceWeekCount;
+    const idle = hasMaterialFilter ? 0 : Math.max(0, totalAvailable - b.gpt - b.ups - b.ps);
+
+    points.push({
+      period: periodLabel(period),
+      sortKey: periodSortKey(period),
+      goodProductionTime: Math.round(b.gpt * 100) / 100,
+      unplannedStoppages: Math.round(b.ups * 100) / 100,
+      plannedStoppages: Math.round(b.ps * 100) / 100,
+      idleTime: Math.round(idle * 100) / 100,
+      totalAvailableHours: Math.round(totalAvailable * 100) / 100,
+    });
+  }
+
+  points.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  return points;
 }
