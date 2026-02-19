@@ -106,8 +106,8 @@ export function buildChartData(
     const app = b.appPlanProdQty > 0 ? (1 - b.appAbsPlanActual / b.appPlanProdQty) * 100 : null;
 
     const nominalRate = b.targetHours > 0 ? b.nomTimesTarget / b.targetHours : null;
-    const planRate = b.expectedNPH > 0 ? b.nomTimesExpected / b.expectedNPH : null;
-    const actualRate = b.actualNPH > 0 ? b.nomTimesActual / b.actualNPH : null;
+    const planRate = b.expectedNPH > 0 ? b.nomTimesTarget / b.expectedNPH : null;
+    const actualRate = b.actualNPH > 0 ? b.nomTimesTarget / b.actualNPH : null;
 
     const deviation =
       expectedEff !== null && actualEff !== null
