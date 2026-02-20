@@ -28,10 +28,20 @@ export function FilterBar({ data }: FilterBarProps) {
     pruneInvalidSelections,
   } = useFilterStore();
 
+  // When FERT Lines Only is active, restrict to resources that have at least one FERT row
+  const baseRows = useMemo(() => {
+    if (!fertLinesOnly) return data.efficiency;
+    const fertResources = new Set<string>();
+    for (const r of data.efficiency) {
+      if (r.materialType?.startsWith('FERT')) fertResources.add(r.workCenterCode);
+    }
+    return data.efficiency.filter((r) => fertResources.has(r.workCenterCode));
+  }, [data.efficiency, fertLinesOnly]);
+
   // Cross-filtered options
   const options = useMemo(
-    () => getFilteredOptions(data.efficiency, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials),
-    [data.efficiency, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials]
+    () => getFilteredOptions(baseRows, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials),
+    [baseRows, selectedPlants, selectedResources, selectedMaterialTypes, selectedMaterials]
   );
 
   // Prune stale selections after cross-filter recalc

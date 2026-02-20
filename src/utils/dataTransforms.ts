@@ -195,7 +195,7 @@ export function getFilteredOptions(
 
   return {
     plants: Array.from(plantMap, ([code, name]) => ({ code, name })).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      a.code.localeCompare(b.code)
     ),
     resources: Array.from(resourceMap, ([code, name]) => ({ code, name })).sort((a, b) =>
       a.name.localeCompare(b.name)

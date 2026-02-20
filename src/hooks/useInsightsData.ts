@@ -294,7 +294,7 @@ export function useInsightsData(data: ParsedData | null): InsightsPlantRow[] {
       });
     }
 
-    plants.sort((a, b) => a.plantName.localeCompare(b.plantName));
+    plants.sort((a, b) => a.plantCode.localeCompare(b.plantCode));
 
     return plants;
   }, [data, effRows, attRows]);

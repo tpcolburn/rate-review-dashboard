@@ -167,6 +167,25 @@ function ShadedRegions(props: Record<string, unknown>) {
   );
 }
 
+/** Compute a nice axis domain [min, max] that fits the data with padding. */
+function niceDomain(values: (number | null | undefined)[], paddingPct = 0.1): [number, number] {
+  const nums = values.filter((v): v is number => v != null && isFinite(v));
+  if (nums.length === 0) return [0, 100];
+
+  let min = Math.min(...nums);
+  let max = Math.max(...nums);
+
+  const range = max - min;
+  const pad = Math.max(range * paddingPct, 1); // at least 1 unit of padding
+
+  min = Math.floor((min - pad) / 5) * 5; // round down to nearest 5
+  max = Math.ceil((max + pad) / 5) * 5;  // round up to nearest 5
+
+  if (min < 0) min = 0;
+
+  return [min, max];
+}
+
 export function EfficiencyChart({ data }: EfficiencyChartProps) {
   const { visibleMetrics } = useFilterStore();
   const DeviationLabel = makeDeviationLabel(data);
@@ -183,6 +202,15 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
   const showRightAxis = visibleMetrics.ai || visibleMetrics.ppa || visibleMetrics.app;
   const showRates = visibleMetrics.rates;
 
+  // Auto-scale axes to data range
+  const effDomain = niceDomain(data.flatMap((d) => [d.expectedEfficiency, d.actualEfficiency]));
+  const rightValues: (number | null)[] = [];
+  if (visibleMetrics.ai) rightValues.push(...data.map((d) => d.ai));
+  if (visibleMetrics.ppa) rightValues.push(...data.map((d) => d.ppa));
+  if (visibleMetrics.app) rightValues.push(...data.map((d) => d.app));
+  const rightDomain = niceDomain(rightValues);
+  const ratesDomain = niceDomain(data.flatMap((d) => [d.nominalRate, d.planRate, d.actualRate]));
+
   return (
     <div>
       <ResponsiveContainer width="100%" height={350}>
@@ -198,7 +226,8 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
           <YAxis
             yAxisId="left"
             width={60}
-            domain={[0, 'auto']}
+            domain={effDomain}
+            allowDataOverflow
             tick={showEfficiency ? { fontSize: 11, fill: '#6b7280' } : false}
             tickFormatter={(v: number) => `${v}%`}
             axisLine={showEfficiency}
@@ -218,7 +247,8 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             yAxisId="right"
             orientation="right"
             width={60}
-            domain={[0, 'auto']}
+            domain={rightDomain}
+            allowDataOverflow
             tick={showRightAxis ? { fontSize: 11, fill: '#6b7280' } : false}
             tickFormatter={(v: number) => `${v}%`}
             axisLine={showRightAxis}
@@ -238,7 +268,8 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             yAxisId="rates"
             orientation="right"
             width={60}
-            domain={[0, 'auto']}
+            domain={ratesDomain}
+            allowDataOverflow
             tick={showRates ? { fontSize: 11, fill: '#6b7280' } : false}
             tickFormatter={(v: number) => v.toLocaleString()}
             axisLine={showRates}

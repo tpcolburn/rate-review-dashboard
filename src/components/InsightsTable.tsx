@@ -1,8 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { InsightsPlantRow, InsightsResourceRow, InsightsMaterialRow } from '../types/data';
 
 interface Props {
   data: InsightsPlantRow[];
+}
+
+interface ThresholdFilter {
+  lowerThan: string; // raw input text — empty means inactive
+  higherThan: string;
 }
 
 function fmt(value: number | null, suffix = '%'): string {
@@ -188,9 +193,48 @@ function PlantRow({
   );
 }
 
+function resourceMatchesThreshold(
+  res: InsightsResourceRow,
+  lowerVal: number | null,
+  higherVal: number | null
+): boolean {
+  if (res.efficiencyDifference === null) return false;
+  if (lowerVal !== null && res.efficiencyDifference < lowerVal) return true;
+  if (higherVal !== null && res.efficiencyDifference > higherVal) return true;
+  return false;
+}
+
 export function InsightsTable({ data }: Props) {
   const [expandedPlants, setExpandedPlants] = useState<Set<string>>(new Set());
   const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set());
+  const [threshold, setThreshold] = useState<ThresholdFilter>({ lowerThan: '', higherThan: '' });
+
+  const lowerVal = threshold.lowerThan !== '' ? parseFloat(threshold.lowerThan) : null;
+  const higherVal = threshold.higherThan !== '' ? parseFloat(threshold.higherThan) : null;
+  const hasThreshold = (lowerVal !== null && !isNaN(lowerVal)) || (higherVal !== null && !isNaN(higherVal));
+  const parsedLower = lowerVal !== null && !isNaN(lowerVal) ? lowerVal : null;
+  const parsedHigher = higherVal !== null && !isNaN(higherVal) ? higherVal : null;
+
+  const filteredData = useMemo(() => {
+    if (!hasThreshold) return data;
+
+    const result: InsightsPlantRow[] = [];
+    for (const plant of data) {
+      const matchingResources = plant.resources.filter((res) =>
+        resourceMatchesThreshold(res, parsedLower, parsedHigher)
+      );
+      if (matchingResources.length > 0) {
+        result.push({ ...plant, resources: matchingResources });
+      }
+    }
+    return result;
+  }, [data, hasThreshold, parsedLower, parsedHigher]);
+
+  // When threshold is active, auto-expand all plants so matching resources are visible
+  const effectiveExpandedPlants = useMemo(() => {
+    if (!hasThreshold) return expandedPlants;
+    return new Set(filteredData.map((p) => p.plantCode));
+  }, [hasThreshold, filteredData, expandedPlants]);
 
   const togglePlant = useCallback((key: string) => {
     setExpandedPlants((prev) => {
@@ -210,6 +254,10 @@ export function InsightsTable({ data }: Props) {
     });
   }, []);
 
+  const matchCount = hasThreshold
+    ? filteredData.reduce((sum, p) => sum + p.resources.length, 0)
+    : null;
+
   if (data.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-gray-400 text-sm">
@@ -220,6 +268,49 @@ export function InsightsTable({ data }: Props) {
 
   return (
     <div className="px-4 py-4">
+      {/* Threshold filter bar */}
+      <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 mb-3 flex items-center gap-4 flex-wrap">
+        <span className="text-sm font-medium text-gray-700">Eff. Diff. Threshold:</span>
+        <label className="flex items-center gap-1.5 text-sm text-gray-600">
+          Lower than
+          <input
+            type="number"
+            step="0.1"
+            value={threshold.lowerThan}
+            onChange={(e) => setThreshold((prev) => ({ ...prev, lowerThan: e.target.value }))}
+            placeholder="e.g. -5"
+            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-slate-400"
+          />
+          <span className="text-gray-400">pp</span>
+        </label>
+        <span className="text-gray-400 text-xs">OR</span>
+        <label className="flex items-center gap-1.5 text-sm text-gray-600">
+          Higher than
+          <input
+            type="number"
+            step="0.1"
+            value={threshold.higherThan}
+            onChange={(e) => setThreshold((prev) => ({ ...prev, higherThan: e.target.value }))}
+            placeholder="e.g. 10"
+            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-slate-400"
+          />
+          <span className="text-gray-400">pp</span>
+        </label>
+        {hasThreshold && (
+          <>
+            <span className="text-xs text-gray-500">
+              {matchCount} resource{matchCount !== 1 ? 's' : ''} in {filteredData.length} plant{filteredData.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              onClick={() => setThreshold({ lowerThan: '', higherThan: '' })}
+              className="text-xs text-slate-500 hover:text-slate-700 underline"
+            >
+              Clear
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="bg-white rounded-lg border border-gray-200 overflow-auto">
         <table className="w-full text-sm">
           <thead>
@@ -235,11 +326,11 @@ export function InsightsTable({ data }: Props) {
             </tr>
           </thead>
           <tbody>
-            {data.map((plant) => (
+            {filteredData.map((plant) => (
               <PlantRow
                 key={plant.plantCode}
                 plant={plant}
-                expanded={expandedPlants.has(plant.plantCode)}
+                expanded={effectiveExpandedPlants.has(plant.plantCode)}
                 expandedResources={expandedResources}
                 onTogglePlant={togglePlant}
                 onToggleResource={toggleResource}
