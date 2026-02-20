@@ -106,3 +106,108 @@ Above the table, use the threshold inputs to find problem lines:
 4. Enter a lower threshold (e.g., `-5`) to surface underperforming resources.
 5. Expand a flagged resource to see which materials are dragging efficiency down.
 6. Switch to the **Dashboard** tab with that resource selected to see the trend over time.
+
+---
+
+## Refreshing the Data
+
+The dashboard loads its data from a single Excel file on startup. To update the data:
+
+1. Export a fresh copy of the workbook from your source system.
+2. Name it exactly **`Rate Review Dashboard Query.xlsx`**.
+3. Place it in the `public/data/` folder inside the project directory, replacing the existing file:
+   ```
+   rate-review-dashboard/
+   └── public/
+       └── data/
+           └── Rate Review Dashboard Query.xlsx   <-- replace this file
+   ```
+4. **If running the dev server** (`npm run dev`): simply refresh your browser (F5). The dashboard reloads the file on every page load.
+5. **If running a production build**: rebuild with `npm run build`, then serve the `dist/` folder. The new data file must be copied into `dist/data/` (or rebuild so Vite copies it from `public/`).
+
+There is no upload button or import step — the dashboard reads the file automatically on load.
+
+---
+
+## Source Data Format
+
+The Excel workbook must contain exactly three sheets, named and structured as described below. Each sheet uses the same layout convention:
+
+- **Row 1** — Title (ignored)
+- **Row 2** — Blank (ignored)
+- **Row 3** — Column headers (ignored, but columns must be in the correct order)
+- **Row 4+** — Data rows
+
+Rows missing a value in the first column are skipped. Rows missing a year-week value are skipped.
+
+### Sheet 1: "Efficiency-AI"
+
+| Column | Index | Field | Type | Description |
+|--------|:-----:|-------|------|-------------|
+| A | 0 | Plant Code | text | e.g. `DE05` |
+| B | 1 | Plant Name | text | e.g. `Frankfurt Factory` |
+| C | 2 | Work Center Code | text | e.g. `S05` |
+| D | 3 | Work Center Name | text | e.g. `Packaging Line 5` |
+| E | 4 | Year-Week | text | ISO format `YYYY.WW` (e.g. `2025.02`) |
+| F | 5 | Material Type | text | e.g. `FERT`, `HALB`, or blank |
+| G | 6 | Material Description | text | Free text, or blank |
+| H | 7 | Target Hours | number | Standard production hours |
+| I | 8 | _(format string)_ | -- | _Skipped_ |
+| J | 9 | Actual NPH | number | Actual non-productive hours |
+| K | 10 | _(format string)_ | -- | _Skipped_ |
+| L | 11 | Expected NPH | number | Expected non-productive hours |
+| M | 12 | _(format string)_ | -- | _Skipped_ |
+| N | 13 | Nominal Speed | number | Units per hour at standard rate |
+| O | 14 | _(format string)_ | -- | _Skipped_ |
+| P | 15 | Good Production Time | number | Hours of good production |
+| Q | 16 | _(format string)_ | -- | _Skipped_ |
+| R | 17 | Unplanned Stoppages | number | Hours of unplanned stops |
+| S | 18 | _(format string)_ | -- | _Skipped_ |
+| T | 19 | Planned Stoppages | number | Hours of planned stops |
+| U | 20 | _(format string)_ | -- | _Skipped_ |
+| V | 21 | Actual Production Qty | number | Units produced |
+
+**Note:** Even-indexed columns after index 7 (I, K, M, O, Q, S, U) contain format strings from the source system and are ignored by the parser. The dashboard reads data from odd-indexed columns (H, J, L, N, P, R, T, V).
+
+### Sheet 2: "Attainment"
+
+| Column | Index | Field | Type | Description |
+|--------|:-----:|-------|------|-------------|
+| A | 0 | Plant Code | text | Must match Efficiency-AI plant codes |
+| B | 1 | Plant Name | text | |
+| C | 2 | Work Center Code | text | May be blank (plant-level aggregates) |
+| D | 3 | Work Center Name | text | May be blank |
+| E | 4 | Year-Week | text | ISO format `YYYY.WW` |
+| F | 5 | Material Type | text | |
+| G | 6 | Material Description | text | |
+| H | 7 | Actual Production Qty | number | Units produced |
+| I | 8 | _(format string)_ | -- | _Skipped_ |
+| J | 9 | APP Plan Production Qty | number | Planned qty for APP metric |
+| K | 10 | _(format string)_ | -- | _Skipped_ |
+| L | 11 | APP Abs Plan vs Actual | number | Absolute deviation from plan |
+| M | 12 | _(format string)_ | -- | _Skipped_ |
+| N | 13 | MSA Plan Production Qty | number | _(parsed but not displayed)_ |
+| O | 14 | _(format string)_ | -- | _Skipped_ |
+| P | 15 | MSA Abs Plan vs Actual | number | _(parsed but not displayed)_ |
+
+### Sheet 3: "Capacity"
+
+| Column | Index | Field | Type | Description |
+|--------|:-----:|-------|------|-------------|
+| A | 0 | Plant | text | Plant name |
+| B | 1 | Plant ID | text | Must match `plantCode` from Efficiency-AI |
+| C | 2 | Resource Name | text | e.g. `WS05_5004_008` — matched to work centers via substring |
+| D | 3 | OMP Technical Name | text | Alternative name used for substring matching, or blank |
+| E | 4 | Snapshot Week | text | _(parsed but not used for calculations)_ |
+| F | 5 | SAP Calendar Year-Week | number | _(parsed but not used for calculations)_ |
+| G | 6 | Sum Max Capacity | number | _(parsed but not used for calculations)_ |
+| H | 7 | Sum Total Available | number | Total available hours for Machine Policy denominator |
+| I | 8 | Sum Total Max Load | number | Total max load hours for Machine Policy numerator |
+
+### Key Data Rules
+
+- **Plant codes must match** between all three sheets (e.g. `DE05` in Efficiency-AI = `DE05` in Capacity's Plant ID column).
+- **Year-Week format** must be `YYYY.WW` with leading zero for weeks 1-9 (e.g. `2025.02`, not `2025.2`).
+- **Capacity-to-Resource matching** is done by substring: the dashboard checks if the Resource Name or OMP Technical Name *contains* the Work Center Code. For example, `WS05_5004_008` contains `S05`, so it maps to work center `S05`. Multiple capacity rows can map to one work center — their hours are summed.
+- **Blank numeric cells** are treated as zero.
+- **Blank text cells** (Material Type, Material Description, Work Center on Attainment) are allowed and treated as null.
