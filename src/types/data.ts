@@ -85,6 +85,50 @@ export interface FilterOptions {
   materials: string[];
 }
 
+export interface InsightsMaterialRow {
+  materialType: string;
+  materialDesc: string;
+  expectedEfficiency: number | null;
+  actualEfficiency: number | null;
+  efficiencyDifference: number | null;
+  ppa: number | null;
+  app: number | null;
+  plannedQty: number;
+  actualQty: number;
+}
+
+export interface InsightsResourceRow {
+  workCenterCode: string;
+  workCenterName: string;
+  expectedEfficiency: number | null;
+  actualEfficiency: number | null;
+  efficiencyDifference: number | null;
+  ppa: number | null;
+  app: number | null;
+  plannedQty: number;
+  actualQty: number;
+  ai: number | null;
+  plannedStopsPct: number | null;
+  machinePolicy: number | null;
+  materials: InsightsMaterialRow[];
+}
+
+export interface InsightsPlantRow {
+  plantCode: string;
+  plantName: string;
+  expectedEfficiency: number | null;
+  actualEfficiency: number | null;
+  efficiencyDifference: number | null;
+  ppa: number | null;
+  app: number | null;
+  plannedQty: number;
+  actualQty: number;
+  ai: number | null;
+  plannedStopsPct: number | null;
+  machinePolicy: number | null;
+  resources: InsightsResourceRow[];
+}
+
 export type TimeScope = 'week' | 'month' | 'quarter';
 
 export interface FilterState {
@@ -95,6 +139,7 @@ export interface FilterState {
   timeScope: TimeScope;
   dateRange: [string, string]; // [start yearWeek, end yearWeek]
   visibleMetrics: {
+    efficiency: boolean;
     ai: boolean;
     ppa: boolean;
     app: boolean;

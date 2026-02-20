@@ -5,6 +5,16 @@ export function MetricToggles() {
 
   return (
     <div className="flex items-center gap-4 px-4 py-2 bg-gray-50 border-b border-gray-200">
+      <label className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={visibleMetrics.efficiency}
+          onChange={() => toggleMetric('efficiency')}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-sm font-medium text-gray-700">Efficiencies</span>
+      </label>
+      <span className="text-xs font-medium text-gray-400">|</span>
       <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
         Overlay:
       </span>

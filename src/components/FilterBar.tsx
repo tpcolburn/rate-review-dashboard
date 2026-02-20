@@ -15,12 +15,14 @@ export function FilterBar({ data }: FilterBarProps) {
     selectedResources,
     selectedMaterialTypes,
     selectedMaterials,
+    fertLinesOnly,
     timeScope,
     dateRange,
     setPlants,
     setResources,
     setMaterialTypes,
     setMaterials,
+    setFertLinesOnly,
     setTimeScope,
     setDateRange,
     pruneInvalidSelections,
@@ -95,6 +97,19 @@ export function FilterBar({ data }: FilterBarProps) {
           allLabel="All Types"
           minWidth="200px"
         />
+
+        {/* FERT Lines Only */}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={fertLinesOnly}
+            onChange={(e) => setFertLinesOnly(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-slate-700 focus:ring-slate-500"
+          />
+          <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+            FERT Lines Only
+          </span>
+        </label>
 
         {/* Material */}
         <MultiSelect

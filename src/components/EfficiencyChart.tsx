@@ -179,6 +179,7 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
     );
   }
 
+  const showEfficiency = visibleMetrics.efficiency;
   const showRightAxis = visibleMetrics.ai || visibleMetrics.ppa || visibleMetrics.app;
   const showRates = visibleMetrics.rates;
 
@@ -198,15 +199,19 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             yAxisId="left"
             width={60}
             domain={[0, 'auto']}
-            tick={{ fontSize: 11, fill: '#6b7280' }}
+            tick={showEfficiency ? { fontSize: 11, fill: '#6b7280' } : false}
             tickFormatter={(v: number) => `${v}%`}
+            axisLine={showEfficiency}
+            tickLine={showEfficiency}
           >
-            <Label
-              value="Efficiency %"
-              angle={-90}
-              position="insideLeft"
-              style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
-            />
+            {showEfficiency && (
+              <Label
+                value="Efficiency %"
+                angle={-90}
+                position="insideLeft"
+                style={{ textAnchor: 'middle', fill: '#6b7280', fontSize: 12 }}
+              />
+            )}
           </YAxis>
 
           <YAxis
@@ -256,36 +261,42 @@ export function EfficiencyChart({ data }: EfficiencyChartProps) {
             wrapperStyle={{ fontSize: 12 }}
           />
 
-          <ReferenceLine yAxisId="left" y={100} stroke="#9ca3af" strokeDasharray="3 3" />
+          {showEfficiency && (
+            <ReferenceLine yAxisId="left" y={100} stroke="#9ca3af" strokeDasharray="3 3" />
+          )}
 
           {/* Shaded area between expected and actual */}
-          <Customized component={ShadedRegions} />
+          {showEfficiency && <Customized component={ShadedRegions} />}
 
           {/* Expected Line Efficiency - dashed */}
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="expectedEfficiency"
-            name="Expected Line Efficiency"
-            stroke="#1e3a5f"
-            strokeWidth={2}
-            strokeDasharray="8 4"
-            dot={false}
-            connectNulls
-          />
+          {showEfficiency && (
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="expectedEfficiency"
+              name="Expected Line Efficiency"
+              stroke="#1e3a5f"
+              strokeWidth={2}
+              strokeDasharray="8 4"
+              dot={false}
+              connectNulls
+            />
+          )}
 
           {/* Actual Line Efficiency - solid */}
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="actualEfficiency"
-            name="Actual Line Efficiency"
-            stroke="#2563eb"
-            strokeWidth={2}
-            dot={{ r: 3, fill: '#2563eb' }}
-            connectNulls
-            label={<DeviationLabel />}
-          />
+          {showEfficiency && (
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="actualEfficiency"
+              name="Actual Line Efficiency"
+              stroke="#2563eb"
+              strokeWidth={2}
+              dot={{ r: 3, fill: '#2563eb' }}
+              connectNulls
+              label={<DeviationLabel />}
+            />
+          )}
 
           {/* AI - Asset Intensity */}
           {visibleMetrics.ai && (

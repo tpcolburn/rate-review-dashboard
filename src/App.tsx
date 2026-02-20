@@ -1,15 +1,22 @@
+import { useState } from 'react';
 import { useExcelData } from './hooks/useExcelData';
 import { useFilteredData } from './hooks/useFilteredData';
+import { useInsightsData } from './hooks/useInsightsData';
 import { useFilterStore } from './store/useFilterStore';
 import { FilterBar } from './components/FilterBar';
 import { MetricToggles } from './components/MetricToggles';
 import { EfficiencyChart } from './components/EfficiencyChart';
 import { TimeBreakdownChart } from './components/TimeBreakdownChart';
 import { DataTable } from './components/DataTable';
+import { InsightsTable } from './components/InsightsTable';
+
+type Tab = 'dashboard' | 'insights';
 
 function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const { data, loading, error } = useExcelData();
   const { chartData, timeBreakdownData } = useFilteredData(data);
+  const insightsData = useInsightsData(data);
   const selectedMaterialTypes = useFilterStore((s) => s.selectedMaterialTypes);
   const selectedMaterials = useFilterStore((s) => s.selectedMaterials);
 
@@ -42,28 +49,58 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-slate-800 text-white px-4 py-3">
+      <header className="bg-slate-800 text-white px-4 py-3 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Rate Review Dashboard</h1>
+        <div className="flex rounded-md overflow-hidden text-sm">
+          <button
+            className={`px-4 py-1.5 font-medium transition-colors ${
+              activeTab === 'dashboard'
+                ? 'bg-slate-600 text-white'
+                : 'bg-slate-800 text-slate-300 hover:text-white'
+            }`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`px-4 py-1.5 font-medium transition-colors ${
+              activeTab === 'insights'
+                ? 'bg-slate-600 text-white'
+                : 'bg-slate-800 text-slate-300 hover:text-white'
+            }`}
+            onClick={() => setActiveTab('insights')}
+          >
+            Insights
+          </button>
+        </div>
       </header>
 
-      {/* Filters */}
+      {/* Filters (shared across tabs) */}
       <FilterBar data={data} />
 
-      {/* Metric Toggles */}
-      <MetricToggles />
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Metric Toggles (Dashboard only) */}
+          <MetricToggles />
 
-      {/* Charts */}
-      <div className="px-4 py-4">
-        <div className="bg-white p-4">
-          <EfficiencyChart data={chartData} />
-          <TimeBreakdownChart data={timeBreakdownData} hasMaterialFilter={hasMaterialFilter} />
-        </div>
-      </div>
+          {/* Charts */}
+          <div className="px-4 py-4">
+            <div className="bg-white p-4">
+              <EfficiencyChart data={chartData} />
+              <TimeBreakdownChart data={timeBreakdownData} hasMaterialFilter={hasMaterialFilter} />
+            </div>
+          </div>
 
-      {/* Data Table */}
-      <div className="px-4 pb-4">
-        <DataTable data={chartData} />
-      </div>
+          {/* Data Table */}
+          <div className="px-4 pb-4">
+            <DataTable data={chartData} />
+          </div>
+        </>
+      )}
+
+      {activeTab === 'insights' && (
+        <InsightsTable data={insightsData} />
+      )}
     </div>
   );
 }

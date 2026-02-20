@@ -6,17 +6,19 @@ interface FilterStore {
   selectedResources: string[];
   selectedMaterialTypes: string[];
   selectedMaterials: string[];
+  fertLinesOnly: boolean;
   timeScope: TimeScope;
   dateRange: [string, string];
-  visibleMetrics: { ai: boolean; ppa: boolean; app: boolean; rates: boolean };
+  visibleMetrics: { efficiency: boolean; ai: boolean; ppa: boolean; app: boolean; rates: boolean };
 
   setPlants: (plants: string[]) => void;
   setResources: (resources: string[]) => void;
   setMaterialTypes: (types: string[]) => void;
   setMaterials: (materials: string[]) => void;
+  setFertLinesOnly: (value: boolean) => void;
   setTimeScope: (scope: TimeScope) => void;
   setDateRange: (range: [string, string]) => void;
-  toggleMetric: (metric: 'ai' | 'ppa' | 'app' | 'rates') => void;
+  toggleMetric: (metric: 'efficiency' | 'ai' | 'ppa' | 'app' | 'rates') => void;
   pruneInvalidSelections: (options: FilterOptions) => void;
 }
 
@@ -25,14 +27,16 @@ export const useFilterStore = create<FilterStore>((set) => ({
   selectedResources: [],
   selectedMaterialTypes: [],
   selectedMaterials: [],
+  fertLinesOnly: false,
   timeScope: 'week',
   dateRange: ['', ''],
-  visibleMetrics: { ai: false, ppa: false, app: false, rates: false },
+  visibleMetrics: { efficiency: true, ai: false, ppa: false, app: false, rates: false },
 
   setPlants: (plants) => set({ selectedPlants: plants }),
   setResources: (resources) => set({ selectedResources: resources }),
   setMaterialTypes: (types) => set({ selectedMaterialTypes: types }),
   setMaterials: (materials) => set({ selectedMaterials: materials }),
+  setFertLinesOnly: (value) => set({ fertLinesOnly: value }),
 
   setTimeScope: (scope) => set({ timeScope: scope }),
   setDateRange: (range) => set({ dateRange: range }),
